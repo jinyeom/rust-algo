@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::ops::Deref;
 
 pub struct BST<T: Ord> {
     data: Option<T>,
@@ -24,6 +25,8 @@ where
         } else {
             match &self.data {
                 None => (),
+                // TODO: Can we use `unwrap` here instead?
+                // https://doc.rust-lang.org/rust-by-example/error/option_unwrap.html
                 Some(key) => {
                     let target = if data < *key {
                         &mut self.left
@@ -62,6 +65,54 @@ where
                     Some(node) => node.search(data),
                 },
             },
+        }
+    }
+
+    pub fn iter() {}
+}
+
+struct BSTIter<'a, T>
+where
+    T: Ord,
+{
+    stack: Vec<&'a BST<T>>,
+}
+
+impl<'a, T> BSTIter<'a, T>
+where
+    T: Ord,
+{
+    pub fn new(bst: &BST<T>) -> BSTIter<T> {
+        let mut iter = BSTIter {
+            stack: vec![bst],  // insert the root
+        };
+        iter.stack_push_left();
+        iter
+    }
+
+    fn stack_push_left(&mut self) {
+        while let Some(child) = &self.stack.last().unwrap().left {
+            self.stack.push(child);
+        }
+    }
+}
+
+impl<'a, T> Iterator for BSTIter<'a, T>
+where
+    T: Ord,
+{
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<&'a T> {
+        if self.stack.is_empty() {
+            None
+        } else {
+            let node = self.stack.pop().unwrap();
+            if node.right.is_some() {
+                self.stack.push(node.right.as_ref().unwrap().deref());
+                self.stack_push_left();  // push left of the right child node we just pushed
+            }
+            node.data.as_ref()
         }
     }
 }
